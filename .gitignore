@@ -1,0 +1,68 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual Environment
+venv/
+.venv/
+env/
+ENV/
+env.bak/
+venv.bak/
+
+# IDE & Editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# Jupyter Notebooks
+.ipynb_checkpoints/
+*-checkpoint.ipynb
+
+# Saved Models / Checkpoints (keep folder via .gitkeep)
+models/*.h5
+models/*.keras
+models/*.pt
+models/*.pth
+models/*.onnx
+!models/.gitkeep
+
+# Results / outputs (keep folder structure via .gitkeep)
+results/confusion_matrix/*.png
+results/confusion_matrix/*.jpg
+!results/confusion_matrix/.gitkeep
+
+# Experiments tracking / logs
+experiments/*.log
+experiments/*.csv
+!experiments/.gitkeep
+
+# Report artifacts
+!report/.gitkeep
+
+# Dataset images (keep directory structure via .gitkeep)
+dataset/**/*.jpg
+dataset/**/*.jpeg
+dataset/**/*.png
+!dataset/**/.gitkeep
