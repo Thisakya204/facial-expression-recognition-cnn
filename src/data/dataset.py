@@ -323,6 +323,126 @@ def load_data(
         }
 
 
+try:
+    import torch
+    from torch.utils.data import Dataset, DataLoader
+    TORCH_AVAILABLE = True
+except ImportError:
+    TORCH_AVAILABLE = False
+
+
+if TORCH_AVAILABLE:
+    class TorchFERDataset(Dataset):
+        """
+        PyTorch Dataset wrapper for FER images.
+        Converts (H, W, C) numpy arrays into PyTorch (C, H, W) float tensors.
+        """
+        def __init__(
+            self,
+            image_paths: List[str],
+            labels: List[int],
+            augment: bool = False,
+            grayscale: bool = True,
+            normalize: bool = True,
+            norm_method: str = "minmax",
+            enhance: bool = False,
+            random_seed: Optional[int] = RANDOM_SEED,
+        ):
+            self.image_paths = image_paths
+            self.labels = labels
+            self.augment = augment
+            self.grayscale = grayscale
+            self.normalize = normalize
+            self.norm_method = norm_method
+            self.enhance = enhance
+            self.augmenter = DataAugmentation(random_seed=random_seed) if augment else None
+
+        def __len__(self) -> int:
+            return len(self.image_paths)
+
+        def __getitem__(self, idx: int) -> Tuple["torch.Tensor", "torch.Tensor"]:
+            path = self.image_paths[idx]
+            label = self.labels[idx]
+
+            img = load_and_preprocess_image(
+                image_path=path,
+                target_size=IMAGE_SIZE,
+                grayscale=self.grayscale,
+                normalize=self.normalize,
+                norm_method=self.norm_method,
+                enhance=self.enhance,
+            )
+
+            if self.augment and self.augmenter is not None:
+                img = self.augmenter.apply(img)
+
+            # Convert (H, W, C) -> (C, H, W)
+            tensor_img = torch.from_numpy(img).permute(2, 0, 1).float()
+            tensor_label = torch.tensor(label, dtype=torch.long)
+            return tensor_img, tensor_label
+
+    def get_torch_dataloaders(
+        validation_split: float = VALIDATION_SPLIT,
+        batch_size: int = BATCH_SIZE,
+        augment_train: bool = True,
+        grayscale: bool = True,
+        num_workers: int = 0,
+        pin_memory: bool = False,
+    ) -> Dict[str, "DataLoader"]:
+        """
+        Builds train, val, and test PyTorch DataLoaders.
+        """
+        ds = FERDataset(validation_split=validation_split)
+
+        train_ds = TorchFERDataset(
+            image_paths=ds.train_paths,
+            labels=ds.train_labels,
+            augment=augment_train,
+            grayscale=grayscale,
+        )
+        val_ds = TorchFERDataset(
+            image_paths=ds.val_paths,
+            labels=ds.val_labels,
+            augment=False,
+            grayscale=grayscale,
+        )
+        test_ds = TorchFERDataset(
+            image_paths=ds.test_paths,
+            labels=ds.test_labels,
+            augment=False,
+            grayscale=grayscale,
+        )
+
+        train_loader = DataLoader(
+            train_ds,
+            batch_size=batch_size,
+            shuffle=True,
+            num_workers=num_workers,
+            pin_memory=pin_memory,
+        )
+        val_loader = DataLoader(
+            val_ds,
+            batch_size=batch_size,
+            shuffle=False,
+            num_workers=num_workers,
+            pin_memory=pin_memory,
+        )
+        test_loader = DataLoader(
+            test_ds,
+            batch_size=batch_size,
+            shuffle=False,
+            num_workers=num_workers,
+            pin_memory=pin_memory,
+        )
+
+        return {
+            "train": train_loader,
+            "val": val_loader,
+            "test": test_loader,
+        }
+
+
+
 if __name__ == "__main__":
     print("Testing FERDataset pipeline...")
     ds = FERDataset(validation_split=0.2)

@@ -31,6 +31,8 @@ from .dataset import (
     FERDataset,
     FERBatchGenerator,
     load_data,
+    TorchFERDataset,
+    get_torch_dataloaders,
 )
 
 __all__ = [
@@ -57,4 +59,6 @@ __all__ = [
     "FERDataset",
     "FERBatchGenerator",
     "load_data",
+    "TorchFERDataset",
+    "get_torch_dataloaders",
 ]
