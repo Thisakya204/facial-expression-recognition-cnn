@@ -1,8 +1,9 @@
 """
 Regularization & Ablation Experiments Suite: Dropout, Batch Normalization, and Data Augmentation.
 """
-from typing import Dict, Any, List, Optional
+from typing import Dict, Any, List, Optional, Tuple
 from pathlib import Path
+import os
 import json
 import time
 import pandas as pd
@@ -10,9 +11,11 @@ import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
 import torch
+from torch.utils.data import Dataset, DataLoader
+import torchvision.transforms as T
 
 from ..data.config import BATCH_SIZE, GRAPHS_DIR, RESULTS_DIR
-from ..data.dataset import get_torch_dataloaders
+from ..data.dataset import FERDataset
 from ..data.distribution import ClassDistributionAnalyzer
 from ..models.regularized_cnn import (
     StandardCNN,
@@ -22,6 +25,30 @@ from ..models.regularized_cnn import (
 )
 from .trainer import ModelTrainer
 from ..evaluation.evaluate import ModelEvaluator
+
+
+# Set optimal CPU thread count
+num_cores = min(8, os.cpu_count() or 4)
+torch.set_num_threads(num_cores)
+
+
+class FastTensorDataset(Dataset):
+    """Memory-resident tensor dataset with fast GPU/CPU transforms."""
+
+    def __init__(self, tensors_x: torch.Tensor, tensors_y: torch.Tensor, transform=None):
+        self.tensors_x = tensors_x
+        self.tensors_y = tensors_y
+        self.transform = transform
+
+    def __len__(self) -> int:
+        return self.tensors_x.size(0)
+
+    def __getitem__(self, idx: int) -> Tuple[torch.Tensor, torch.Tensor]:
+        x = self.tensors_x[idx]
+        y = self.tensors_y[idx]
+        if self.transform:
+            x = self.transform(x)
+        return x, y
 
 
 class RegularizationExperimentSuite:
@@ -88,18 +115,43 @@ class RegularizationExperimentSuite:
 
         self.results: Dict[str, Any] = {}
 
-        # Preload data loaders (augmented and non-augmented)
-        print("Preparing DataLoaders for Regularization Experiments...")
-        self.standard_loaders = get_torch_dataloaders(
-            batch_size=self.batch_size,
-            augment_train=False,
-            grayscale=True,
-        )
-        self.augmented_loaders = get_torch_dataloaders(
-            batch_size=self.batch_size,
-            augment_train=True,
-            grayscale=True,
-        )
+        # Preload data into RAM for ultra-fast training (eliminates per-sample disk I/O)
+        print("Preloading FER-2013 dataset into system memory for fast execution...")
+        t_load = time.time()
+        ds = FERDataset(validation_split=0.2)
+        (X_tr, y_tr), (X_val, y_val), (X_te, y_te) = ds.load_all_to_memory(grayscale=True)
+
+        train_x = torch.from_numpy(X_tr).permute(0, 3, 1, 2).float()
+        train_y = torch.from_numpy(y_tr).long()
+
+        val_x = torch.from_numpy(X_val).permute(0, 3, 1, 2).float()
+        val_y = torch.from_numpy(y_val).long()
+
+        test_x = torch.from_numpy(X_te).permute(0, 3, 1, 2).float()
+        test_y = torch.from_numpy(y_te).long()
+
+        train_transforms = T.Compose([
+            T.RandomCrop(48, padding=4, padding_mode="reflect"),
+            T.RandomHorizontalFlip(p=0.5),
+            T.RandomRotation(degrees=10),
+        ])
+
+        train_ds_std = FastTensorDataset(train_x, train_y, transform=None)
+        train_ds_aug = FastTensorDataset(train_x, train_y, transform=train_transforms)
+        val_ds = FastTensorDataset(val_x, val_y, transform=None)
+        test_ds = FastTensorDataset(test_x, test_y, transform=None)
+
+        self.standard_loaders = {
+            "train": DataLoader(train_ds_std, batch_size=self.batch_size, shuffle=True),
+            "val": DataLoader(val_ds, batch_size=self.batch_size, shuffle=False),
+            "test": DataLoader(test_ds, batch_size=self.batch_size, shuffle=False),
+        }
+        self.augmented_loaders = {
+            "train": DataLoader(train_ds_aug, batch_size=self.batch_size, shuffle=True),
+            "val": DataLoader(val_ds, batch_size=self.batch_size, shuffle=False),
+            "test": DataLoader(test_ds, batch_size=self.batch_size, shuffle=False),
+        }
+        print(f"Dataset cached in RAM in {time.time() - t_load:.1f}s! DataLoaders ready.")
 
         # Balanced weights tensor
         self.class_weights_tensor = None

@@ -49,9 +49,9 @@ models/*.onnx
 !models/.gitkeep
 
 # Results / outputs (keep folder structure via .gitkeep)
-results/confusion_matrix/*.png
-results/confusion_matrix/*.jpg
+results/screenshots/
 !results/confusion_matrix/.gitkeep
+!results/confusion_matrix/*.png
 
 # Experiments tracking / logs
 experiments/*.log

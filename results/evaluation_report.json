@@ -1,0 +1,61 @@
+{
+    "test_loss": 1.2836,
+    "test_accuracy": 50.88,
+    "macro_precision": 45.85,
+    "macro_recall": 52.6,
+    "macro_f1": 44.58,
+    "weighted_precision": 53.19,
+    "weighted_recall": 50.88,
+    "weighted_f1": 50.24,
+    "per_class_metrics": [
+        {
+            "Emotion": "angry",
+            "Precision": 41.78,
+            "Recall": 36.33,
+            "F1-Score": 38.86,
+            "Support": 958
+        },
+        {
+            "Emotion": "disgust",
+            "Precision": 12.98,
+            "Recall": 76.58,
+            "F1-Score": 22.19,
+            "Support": 111
+        },
+        {
+            "Emotion": "fear",
+            "Precision": 35.86,
+            "Recall": 8.79,
+            "F1-Score": 14.12,
+            "Support": 1024
+        },
+        {
+            "Emotion": "happy",
+            "Precision": 81.67,
+            "Recall": 71.82,
+            "F1-Score": 76.42,
+            "Support": 1774
+        },
+        {
+            "Emotion": "neutral",
+            "Precision": 48.83,
+            "Recall": 52.47,
+            "F1-Score": 50.59,
+            "Support": 1233
+        },
+        {
+            "Emotion": "sad",
+            "Precision": 37.33,
+            "Recall": 46.19,
+            "F1-Score": 41.29,
+            "Support": 1247
+        },
+        {
+            "Emotion": "surprise",
+            "Precision": 62.51,
+            "Recall": 76.05,
+            "F1-Score": 68.62,
+            "Support": 831
+        }
+    ]
+}

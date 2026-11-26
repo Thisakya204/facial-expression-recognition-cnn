@@ -275,3 +275,89 @@ class ModelEvaluator:
         print(" Per-Class Breakdown:")
         print(self.results["per_class_table"].to_string(index=False))
         print("=" * 70 + "\n")
+
+
+def main():
+    import argparse
+    from ..data.dataset import FERDataset
+    from ..models.regularized_cnn import RegularizedCNN
+    from ..models.baseline_cnn import BaselineCNN
+
+    parser = argparse.ArgumentParser(description="Evaluate Facial Expression Recognition Model on Test Set")
+    parser.add_argument("--model", type=str, default=None, help="Path to model checkpoint (.pth)")
+    parser.add_argument("--batch_size", type=int, default=64, help="Evaluation batch size")
+    args = parser.parse_args()
+
+    models_dir = RESULTS_DIR.parent / "models"
+    model_path = None
+    if args.model:
+        model_path = Path(args.model)
+    else:
+        candidates = [
+            models_dir / "final_model_best.pth",
+            models_dir / "exp_Full_Regularization_best.pth",
+            models_dir / "exp_Dropout_Only_best.pth",
+            models_dir / "exp_Baseline_NoReg_best.pth",
+        ]
+        for c in candidates:
+            if c.exists():
+                model_path = c
+                break
+        if model_path is None:
+            pths = list(models_dir.glob("*.pth"))
+            if pths:
+                model_path = pths[0]
+
+    if model_path is None or not model_path.exists():
+        print(f"Error: No model checkpoint found at {model_path}")
+        return
+
+    print("=" * 70)
+    print("      FACIAL EXPRESSION RECOGNITION - TEST EVALUATION PIPELINE")
+    print("=" * 70)
+    print(f"Evaluating Model Checkpoint: {model_path.name}")
+
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+    ckpt = torch.load(model_path, map_location=device, weights_only=False)
+    state_dict = ckpt.get("model_state_dict", ckpt)
+
+    if any(k.startswith("conv1_1") for k in state_dict.keys()):
+        has_bn = any("bn1_1" in k for k in state_dict.keys())
+        model = RegularizedCNN(in_channels=1, num_classes=NUM_CLASSES, use_batch_norm=has_bn, use_dropout=True)
+    else:
+        model = BaselineCNN(in_channels=1, num_classes=NUM_CLASSES)
+
+    model.load_state_dict(state_dict)
+    model.to(device)
+    model.eval()
+
+    print("Loading test dataset into system memory...")
+    ds = FERDataset(validation_split=0.2)
+    X_te, y_te = ds.load_split_to_memory("test", grayscale=True)
+    test_x = torch.from_numpy(X_te).permute(0, 3, 1, 2).float()
+    test_y = torch.from_numpy(y_te).long()
+
+    class FastTestDataset(torch.utils.data.Dataset):
+        def __init__(self, x, y):
+            self.x = x
+            self.y = y
+        def __len__(self):
+            return self.x.size(0)
+        def __getitem__(self, idx):
+            return self.x[idx], self.y[idx]
+
+    test_loader = DataLoader(FastTestDataset(test_x, test_y), batch_size=args.batch_size, shuffle=False)
+    print(f"Loaded {len(test_x):,} test images successfully.")
+
+    evaluator = ModelEvaluator(model=model, test_loader=test_loader, device=device)
+    evaluator.evaluate()
+
+    evaluator.print_report()
+    evaluator.plot_confusion_matrix()
+    evaluator.plot_per_class_f1()
+    evaluator.save_summary_json()
+
+
+if __name__ == "__main__":
+    main()
