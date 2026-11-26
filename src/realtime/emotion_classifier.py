@@ -42,9 +42,12 @@ class EmotionClassifier:
         """Scans the models directory for the best available checkpoint."""
         models_dir = PROJECT_ROOT / "models"
         candidates = [
+            models_dir / "final_model_best.pth",
+            models_dir / "exp_Full_Regularization_best.pth",
             models_dir / "exp_Dropout_Only_best.pth",
             models_dir / "baseline_cnn_best.pth",
             models_dir / "exp_Baseline_NoReg_best.pth",
+            models_dir / "final_model_last.pth",
             models_dir / "exp_Dropout_Only_last.pth",
             models_dir / "exp_Baseline_NoReg_last.pth",
         ]
