@@ -80,3 +80,31 @@ pip install -r requirements.txt
 3. **Training**: Train models with checkpointing and learning rate scheduling under `src/training/`.
 4. **Evaluation**: Assess accuracy, generate confusion matrices, and evaluate metrics under `src/evaluation/`.
 5. **Real-Time Detection**: Run live facial expression recognition using OpenCV under `src/realtime/`.
+
+## Real-Time Facial Expression Recognition (Member 4)
+
+Real-time webcam application integrating OpenCV face detection, PyTorch CNN inference, temporal smoothing, and live confidence HUD overlay.
+
+![Real-Time Preview](results/graphs/realtime_demo_preview.png)
+
+### Key Features:
+- **Webcam Integration**: Live video stream capture with horizontal mirroring.
+- **Face Detection**: Fast Haar Cascade face detection with context-aware ROI extraction.
+- **CNN Inference**: PyTorch forward inference with Exponential Moving Average (EMA) temporal smoothing to eliminate label jitter.
+- **Confidence Score Display & HUD**:
+  - Color-coded bounding box and emotion badge with confidence percentage.
+  - Real-time side HUD displaying horizontal probability bars across all 7 emotions.
+  - Live FPS counter and detected face count.
+  - Hotkeys: `'q'` to quit, `'h'` to toggle HUD on/off, `'s'` to capture snapshot.
+
+### Run Real-Time Application:
+```bash
+# Start live webcam detection (Camera index 0)
+python -m src.realtime.app
+
+# Specify custom trained checkpoint
+python -m src.realtime.app --camera 0 --model models/exp_Dropout_Only_best.pth
+
+# Test on a static image or video file
+python -m src.realtime.app --source path/to/image.jpg
+```
